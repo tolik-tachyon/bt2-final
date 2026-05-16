@@ -37,7 +37,7 @@ contract AMM is ReentrancyGuard {
 
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
-        } {
+        } else {
             // slither-disable-next-line divide-before-multiply
             uint256 amountBOptimal = (amountADesired * reserveB) / reserveA;
             if (amountBOptimal <= amountBDesired) {

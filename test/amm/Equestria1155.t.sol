@@ -154,8 +154,9 @@ contract Equestria1155Test is Test {
     }
 
     function testCraftRevertsOnInsufficientResources() public {
+        uint256 laughter_id = token.LAUGHTER();
         vm.prank(alice);
-        token.burn(alice, token.LAUGHTER(), 200, "");
+        token.burn(alice, laughter_id, 200, "");
 
         uint256 id = token.PINKIE_PIE();
 

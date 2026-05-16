@@ -148,12 +148,12 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
         if (balanceOf(user, MAGIC)      < r.magic)      revert NotEnoughMagic();
 
         bytes memory data = new bytes(0);
-        _burn(user, HONESTY,    r.honesty,    data);
-        _burn(user, KINDNESS,   r.kindness,   data);
-        _burn(user, LAUGHTER,   r.laughter,   data);
-        _burn(user, GENEROSITY, r.generosity, data);
-        _burn(user, LOYALTY,    r.loyalty,    data);
-        _burn(user, MAGIC,      r.magic,      data);
+        _burn(user, HONESTY,    r.honesty);
+        _burn(user, KINDNESS,   r.kindness);
+        _burn(user, LAUGHTER,   r.laughter);
+        _burn(user, GENEROSITY, r.generosity);
+        _burn(user, LOYALTY,    r.loyalty);
+        _burn(user, MAGIC,      r.magic);
 
         _mint(user, ponyId, 1, "");
     }
@@ -197,6 +197,133 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
         if (interfaceId == 0xffffffff) return false;
         return interfaceId == type(IERC1155).interfaceId ||
                interfaceId == type(IERC165).interfaceId;
+    } 
+
+    function safeTransferFrom(
+        address from, address to,
+        uint256 id,   uint256 value,
+        bytes calldata data
+    ) external nonZeroAddress(to) {
+        address operator = msg.sender;
+        if (!this.isApprovedForAll(from, operator)) revert NotApproved();
+
+        _transferSingle(operator, from, to, id, value);
+        _safeHandleSmartContract(operator, from, to, id, value, data);
+    }
+
+    function safeBatchTransferFrom(
+        address from, address to,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external nonZeroAddress(to) {
+        address operator = msg.sender;
+        if (!this.isApprovedForAll(from, operator)) revert NotApproved();
+        
+        if (ids.length != values.length) revert IdValueArrLengthMismatch();
+
+        for (uint256 i = 0; i < ids.length; ++i) {
+            uint256 id    = ids[i];
+            uint256 value = values[i];
+
+            _transferSingle(operator, from, to, id, value);
+        }
+        _safeHandleSmartContractBatch(operator, from, to, ids, values, data);
+    }
+
+    function burn(
+        address from,
+        uint256 id, uint256 value,
+        bytes calldata data
+    ) external {
+        _burnWithData(from, id, value, data);
+    }
+
+    function mint(
+        address to,
+        uint256 id, uint256 value,
+        bytes calldata data
+    ) external onlyOwner nonZeroAddress(to) {
+        _mint(to, id, value, data);
+    }
+
+    function mintBatch(
+        address to,
+        uint256[] calldata ids, uint256[] calldata values,
+        bytes calldata data
+    ) external onlyOwner nonZeroAddress(to) {
+        if (ids.length != values.length) revert IdValueArrLengthMismatch();
+
+        address operator = msg.sender;
+        address from = address(0);
+
+        for (uint256 i = 0; i < ids.length; ++i) {
+            uint256 id    = ids[i];
+            uint256 value = values[i];
+
+            _transferSingle(operator, from, to, id, value);
+        }
+        _safeHandleSmartContractBatch(operator, from, to, ids, values, data);
+    }
+
+    function balanceOf(address owner, uint256 id)
+        public view nonZeroAddress(owner) returns (uint256)  {
+        return _balances[id][owner];
+    }
+
+    function balanceOfBatch(
+        address[] calldata owners,
+        uint256[] calldata ids
+    ) external view returns (uint256[] memory balances) {
+        if (owners.length != ids.length) revert IdOwnerArrLengthMismatch();
+
+        balances = new uint256[](owners.length);
+        for (uint256 i = 0; i < owners.length; ++i) {
+            address owner = owners[i];
+            uint256 id    = ids[i];
+            balances[i] = balanceOf(owner, id);
+        }
+        return balances;
+    }
+
+    function setApprovalForAll(address operator, bool approved) external notSelfApproval(operator) {
+        _operatorApprovals[msg.sender][operator] = approved;
+        emit ApprovalForAll(msg.sender, operator, approved);
+    }
+
+    function isApprovedForAll(address owner, address operator) external view returns (bool) {
+        return _operatorApprovals[owner][operator];
+    }
+
+    function _burnWithData(
+        address from,
+        uint256 id, uint256 value,
+        bytes memory data
+    ) internal {
+        address operator = msg.sender;
+        address to = address(0);
+        _transferSingle(operator, from, to, id, value);
+        _safeHandleSmartContract(operator, from, to, id, value, data);
+    }
+
+    function _burn(
+        address from,
+        uint256 id, uint256 value
+    ) internal {
+        address operator = msg.sender;
+        address to = address(0);
+        _transferSingle(operator, from, to, id, value);
+    }
+
+    function _mint(
+        address to,
+        uint256 id, uint256 value,
+        bytes memory data
+    ) internal {
+        address operator = msg.sender;
+        address from = address(0);
+        _transferSingle(operator, from, to, id, value);
+        _safeHandleSmartContract(operator, from, to, id, value, data);
     }
 
     function _safeHandleSmartContract(
@@ -244,140 +371,21 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
     }
 
     function _transferSingle(
-        address _operator,
-        address _from, address _to,
-        uint256 _id, uint256 _value,
-        bytes memory _data
-    ) internal nonReentrant {
-        if (_from != address(0)) {
-            uint256 fromBalance = _balances[_id][_from];
+        address operator,
+        address from, address to,
+        uint256 id, uint256 value
+    ) internal {
+        if (from != address(0)) {
+            uint256 fromBalance = _balances[id][from];
             
-            if (fromBalance < _value) revert InsufficientBalance();
+            if (fromBalance < value) revert InsufficientBalance();
             unchecked {
-                _balances[_id][_from] = fromBalance - _value;
+                _balances[id][from] = fromBalance - value;
             }
         }
         
-        _balances[_id][_to] += _value;
+        _balances[id][to] += value;
         
-        emit TransferSingle(_operator, _from, _to, _id, _value);
-    }
-
-    function safeTransferFrom(
-        address from, address to,
-        uint256 id,   uint256 value,
-        bytes calldata data
-    ) external nonZeroAddress(to) {
-        address operator = msg.sender;
-        if (!this.isApprovedForAll(from, operator)) revert NotApproved();
-
-        _transferSingle(operator, from, to, id, value, data);
-        _safeHandleSmartContract(operator, from, to, id, value, data);
-    }
-
-    function safeBatchTransferFrom(
-        address from, address to,
-        uint256[] calldata ids,
-        uint256[] calldata values,
-        bytes calldata data
-    ) external nonZeroAddress(to) {
-        address operator = msg.sender;
-        if (!this.isApprovedForAll(from, operator)) revert NotApproved();
-        
-        if (ids.length != values.length) revert IdValueArrLengthMismatch();
-
-        for (uint256 i = 0; i < ids.length; ++i) {
-            uint256 id    = ids[i];
-            uint256 value = values[i];
-
-            _transferSingle(operator, from, to, id, value, data);
-        }
-        _safeHandleSmartContractBatch(operator, from, to, ids, values, data);
-    }
-
-    function _burn(
-        address from,
-        uint256 id, uint256 value,
-        bytes memory data
-    ) internal {
-        address operator = msg.sender;
-        address to = address(0);
-        _transferSingle(operator, from, to, id, value, data);
-        _safeHandleSmartContract(operator, from, to, id, value, data);
-    }
-
-    function burn(
-        address from,
-        uint256 id, uint256 value,
-        bytes calldata data
-    ) external {
-        _burn(from, id, value, data);
-    }
-
-    function _mint(
-        address to,
-        uint256 id, uint256 value,
-        bytes memory data
-    ) internal {
-        address operator = msg.sender;
-        address from = address(0);
-        _transferSingle(operator, from, to, id, value, data);
-        _safeHandleSmartContract(operator, from, to, id, value, data);
-    }
-
-    function mint(
-        address to,
-        uint256 id, uint256 value,
-        bytes calldata data
-    ) external onlyOwner nonZeroAddress(to) {
-        _mint(to, id, value, data);
-    }
-
-    function mintBatch(
-        address to,
-        uint256[] calldata ids, uint256[] calldata values,
-        bytes calldata data
-    ) external onlyOwner nonZeroAddress(to) {
-        if (ids.length != values.length) revert IdValueArrLengthMismatch();
-
-        address operator = msg.sender;
-        address from = address(0);
-
-        for (uint256 i = 0; i < ids.length; ++i) {
-            uint256 id    = ids[i];
-            uint256 value = values[i];
-
-            _transferSingle(operator, from, to, id, value, data);
-        }
-        _safeHandleSmartContractBatch(operator, from, to, ids, values, data);
-    }
-
-    function balanceOf(address owner, uint256 id)
-        public view nonZeroAddress(owner) returns (uint256)  {
-        return _balances[id][owner];
-    }
-
-    function balanceOfBatch(
-        address[] calldata owners,
-        uint256[] calldata ids
-    ) external view returns (uint256[] memory balances) {
-        if (owners.length != ids.length) revert IdOwnerArrLengthMismatch();
-
-        balances = new uint256[](owners.length);
-        for (uint256 i = 0; i < owners.length; ++i) {
-            address owner = owners[i];
-            uint256 id    = ids[i];
-            balances[i] = balanceOf(owner, id);
-        }
-        return balances;
-    }
-
-    function setApprovalForAll(address operator, bool approved) external notSelfApproval(operator) {
-        _operatorApprovals[msg.sender][operator] = approved;
-        emit ApprovalForAll(msg.sender, operator, approved);
-    }
-
-    function isApprovedForAll(address owner, address operator) external view returns (bool) {
-        return _operatorApprovals[owner][operator];
+        emit TransferSingle(operator, from, to, id, value);
     }
 }
