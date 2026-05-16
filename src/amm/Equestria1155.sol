@@ -204,7 +204,7 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
         bytes calldata data
     ) external nonZeroAddress(to) {
         address operator = msg.sender;
-        if (!this.isApprovedForAll(from, operator)) revert NotApproved();
+        if (from != operator && !_operatorApprovals[from][operator]) revert NotApproved();
 
         _transferSingle(operator, from, to, id, value);
         _safeHandleSmartContract(operator, from, to, id, value, data);
@@ -217,7 +217,7 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
         bytes calldata data
     ) external nonZeroAddress(to) {
         address operator = msg.sender;
-        if (!this.isApprovedForAll(from, operator)) revert NotApproved();
+        if (from != operator && !_operatorApprovals[from][operator]) revert NotApproved();
         
         if (ids.length != values.length) revert IdValueArrLengthMismatch();
 
