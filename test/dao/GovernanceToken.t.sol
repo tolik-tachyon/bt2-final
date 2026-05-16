@@ -25,7 +25,7 @@ contract GovernanceTokenTest is Test {
     }
 
     // 1. correct initial distribution
-    function testInitialDistribution() public {
+    function testInitialDistribution() public view {
         assertEq(token.balanceOf(treasuryUser), 300_000 ether);
         assertEq(token.balanceOf(airdropUser), 200_000 ether);
         assertEq(token.balanceOf(liquidityUser), 100_000 ether);
