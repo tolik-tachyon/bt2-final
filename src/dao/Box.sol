@@ -7,10 +7,14 @@ contract Box {
 
     event ValueChanged(uint256 value);
 
-    modifier onlyTimelock() {
-        require(msg.sender == timelock, "Not timelock");
-        _;
-    }
+     modifier onlyTimelock() {
+         _onlyTimelock();
+         _;
+     }
+
+     function _onlyTimelock() internal view {
+         require(msg.sender == timelock, "Not timelock");
+     }
 
     constructor(address _timelock) {
         require(_timelock != address(0));
