@@ -1,13 +1,14 @@
 "use client";
-import { useState }  from "react";
+import { useEffect, useState }  from "react";
 import {
   useAccount, useReadContracts, useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { parseUnits, maxUint256 }         from "viem";
-import { ADDRESSES, AMM_ABI, ERC20_ABI } from "@/lib/contracts";
+import { ADDRESSES, AMM_ABI, ERC20_ABI, missingAddressLabels } from "@/lib/contracts";
+import { friendlyError, missingEnvMessage } from "@/lib/errors";
 import { formatAmount, parseAmount }      from "@/lib/utils";
-import { ConnectGuard, TxButton, Section, StatCard, InputField } from "@/components/ui";
+import { ConnectGuard, TxButton, Section, StatCard, InputField, Notice } from "@/components/ui";
 
 type Step = "idle" | "approving" | "swapping";
 
@@ -17,12 +18,14 @@ export default function AMMPage() {
   const [direction, setDirection] = useState<"AtoB" | "BtoA">("AtoB");
   const [step, setStep]           = useState<Step>("idle");
   const [txHash, setTxHash]       = useState<`0x${string}` | undefined>();
+  const [error, setError]         = useState("");
+  const missing = missingAddressLabels(["amm", "tokenA", "tokenB"]);
 
   const { writeContractAsync } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 
   const { data, refetch } = useReadContracts({
-    contracts: address ? [
+    contracts: address && missing.length === 0 ? [
       { address: ADDRESSES.amm, abi: AMM_ABI, functionName: "reserveA" },
       { address: ADDRESSES.amm, abi: AMM_ABI, functionName: "reserveB" },
       { address: ADDRESSES.amm, abi: AMM_ABI, functionName: "tokenA"   },
@@ -30,10 +33,18 @@ export default function AMMPage() {
       { address: ADDRESSES.tokenA, abi: ERC20_ABI, functionName: "balanceOf", args: [address] },
       { address: ADDRESSES.tokenA, abi: ERC20_ABI, functionName: "symbol"    },
       { address: ADDRESSES.tokenA, abi: ERC20_ABI, functionName: "allowance", args: [address, ADDRESSES.amm] },
+      { address: ADDRESSES.tokenB, abi: ERC20_ABI, functionName: "balanceOf", args: [address] },
+      { address: ADDRESSES.tokenB, abi: ERC20_ABI, functionName: "symbol"    },
+      { address: ADDRESSES.tokenB, abi: ERC20_ABI, functionName: "allowance", args: [address, ADDRESSES.amm] },
     ] : [],
   });
 
-  const [resA, resB, , , tokenBal, tokenSymbol, allowance] = (data ?? []).map(d => d?.result);
+  useEffect(() => {
+    if (isSuccess) refetch();
+  }, [isSuccess, refetch]);
+
+  const [resA, resB, , , tokenABal, tokenASymbol, allowanceA, tokenBBal, tokenBSymbol, allowanceB] =
+    (data ?? []).map(d => d?.result);
   const reserveA = (resA as bigint) ?? 0n;
   const reserveB = (resB as bigint) ?? 0n;
 
@@ -44,10 +55,22 @@ export default function AMMPage() {
       : (amountInBig * 997n * reserveA) / (reserveB * 1000n + amountInBig * 997n)
     : 0n;
 
+  const tokenBal = direction === "AtoB" ? tokenABal : tokenBBal;
+  const tokenSymbol = direction === "AtoB" ? tokenASymbol : tokenBSymbol;
+  const allowance = direction === "AtoB" ? allowanceA : allowanceB;
   const needsApproval = (allowance as bigint ?? 0n) < amountInBig;
 
   async function handleSwap() {
     if (!address) return;
+    if (missing.length > 0) {
+      setError(missingEnvMessage(missing));
+      return;
+    }
+    if ((tokenBal as bigint ?? 0n) < amountInBig) {
+      setError("Insufficient token balance for this swap.");
+      return;
+    }
+    setError("");
     try {
       if (needsApproval) {
         setStep("approving");
@@ -58,6 +81,8 @@ export default function AMMPage() {
           args:         [ADDRESSES.amm, maxUint256],
         });
         setTxHash(approveTx);
+        setStep("idle");
+        return;
       }
       setStep("swapping");
       const tokenIn = direction === "AtoB" ? ADDRESSES.tokenA : ADDRESSES.tokenB;
@@ -70,14 +95,18 @@ export default function AMMPage() {
       });
       setTxHash(swapTx);
       setStep("idle");
-      refetch();
-    } catch { setStep("idle"); }
+    } catch (err) {
+      setError(friendlyError(err));
+      setStep("idle");
+    }
   }
 
   return (
     <ConnectGuard>
       <main className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6 animate-fade-in">
         <Section title="AMM Marketplace" sub="Constant-product AMM · 0.3% fee">
+          {missing.length > 0 && <Notice tone="warning" message={missingEnvMessage(missing)} />}
+          {error && <Notice tone="error" message={error} />}
           {/* Pool stats */}
           <div className="grid grid-cols-2 gap-3">
             <StatCard label="Reserve A" value={formatAmount(reserveA)} sub="Token A" />
@@ -133,7 +162,7 @@ export default function AMMPage() {
 
             {isSuccess ? (
               <div className="bg-green/10 border border-green/40 text-green text-sm font-mono rounded-lg p-3 text-center">
-                ✓ Swap successful!
+                Transaction confirmed.
               </div>
             ) : (
               <TxButton
@@ -141,7 +170,7 @@ export default function AMMPage() {
                 loading={step !== "idle" || isConfirming}
                 disabled={!amountIn || amountInBig === 0n}
               >
-                {step === "approving" ? "Approving…" : step === "swapping" ? "Swapping…" : needsApproval ? "Approve & Swap" : "Swap"}
+                {step === "approving" ? "Approving..." : step === "swapping" ? "Swapping..." : needsApproval ? "Approve token" : "Swap"}
               </TxButton>
             )}
             {txHash && (
