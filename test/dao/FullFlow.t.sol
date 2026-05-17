@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
@@ -139,7 +139,7 @@ contract FullFlowTest is Test {
 
         governor.queue(t2, v2, c2, descHash2);
 
-        vm.warp(block.timestamp + 2 days + 1);
+        vm.warp(block.timestamp + 2 days + 2);
 
         governor.execute(t2, v2, c2, descHash2);
         assertEq(alice.balance, sent, "treasury ETH not received");
