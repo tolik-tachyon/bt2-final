@@ -35,7 +35,7 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
       - run: forge build --sizes
       - run: forge test -vvv
-      - run: forge coverage --report lcov
+      - run: forge coverage --report lcov --ir-minimum
 
   solhint:
     name: Solhint
