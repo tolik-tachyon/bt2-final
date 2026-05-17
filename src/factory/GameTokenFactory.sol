@@ -4,47 +4,34 @@ pragma solidity ^0.8.25;
 import {GameToken} from "src/amm/GameToken.sol";
 
 contract GameTokenFactory {
-    event TokenCreated(address indexed token, bytes32 indexed salt, bool create2);
+    event TokenCreated(address indexed token, bytes32 indexed salt, bool indexed create2);
 
     address[] public allTokens;
 
     /// @notice Deploy with CREATE (address unpredictable)
-    function createToken(
-        string memory name,
-        string memory symbol
-    ) external returns (address token) {
+    function createToken(string calldata name, string calldata symbol) external returns (address token) {
         token = address(new GameToken(name, symbol, msg.sender));
         allTokens.push(token);
         emit TokenCreated(token, bytes32(0), false);
     }
 
     /// @notice Deploy with CREATE2 (address deterministic)
-    function createToken2(
-        string memory name,
-        string memory symbol,
-        bytes32 salt
-    ) external returns (address token) {
+    function createToken2(string calldata name, string calldata symbol, bytes32 salt) external returns (address token) {
         token = address(new GameToken{salt: salt}(name, symbol, msg.sender));
         allTokens.push(token);
         emit TokenCreated(token, salt, true);
     }
 
     /// @notice Predict CREATE2 address before deployment
-    function predictAddress(
-        string memory name,
-        string memory symbol,
-        bytes32 salt
-    ) external view returns (address) {
-        bytes memory creationCode = abi.encodePacked(
-            type(GameToken).creationCode,
-            abi.encode(name, symbol, msg.sender)
+    function predictAddress(string calldata name, string calldata symbol, bytes32 salt)
+        external
+        view
+        returns (address)
+    {
+        bytes memory creationCode = abi.encodePacked(type(GameToken).creationCode, abi.encode(name, symbol, msg.sender));
+        return address(
+            uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(creationCode)))))
         );
-        return address(uint160(uint256(keccak256(abi.encodePacked(
-            bytes1(0xff),
-            address(this),
-            salt,
-            keccak256(creationCode)
-        )))));
     }
 
     function allTokensLength() external view returns (uint256) {

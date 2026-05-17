@@ -12,20 +12,25 @@ contract LPToken {
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint256 indexed value);
+    event Approval(address indexed owner, address indexed spender, uint256 indexed value);
 
-     modifier onlyAmm() {
-         _onlyAmm();
-         _;
-     }
+    error NotAMM();
+    error NotAllowed();
+    error ZeroAddress();
+    error InsufficientBalance();
 
-     function _onlyAmm() internal view {
-         require(msg.sender == amm, "only AMM");
-     }
+    modifier onlyAmm() {
+        _onlyAmm();
+        _;
+    }
+
+    function _onlyAmm() internal view {
+        if (msg.sender != amm) revert NotAMM();
+    }
 
     constructor(string memory name_, string memory symbol_, address amm_) {
-        require(amm_ != address(0), "zero amm");
+        if (amm_ == address(0)) revert ZeroAddress();
         name = name_;
         symbol = symbol_;
         amm = amm_;
@@ -44,7 +49,7 @@ contract LPToken {
 
     function transferFrom(address from, address to, uint256 amount) external returns (bool) {
         uint256 allowed = allowance[from][msg.sender];
-        require(allowed >= amount, "allowance");
+        if (allowed < amount) revert NotAllowed();
         if (allowed != type(uint256).max) {
             allowance[from][msg.sender] = allowed - amount;
             emit Approval(from, msg.sender, allowance[from][msg.sender]);
@@ -54,25 +59,25 @@ contract LPToken {
     }
 
     function mint(address to, uint256 amount) external onlyAmm {
-        require(to != address(0), "zero to");
+        if (to == address(0)) revert ZeroAddress();
         totalSupply += amount;
         balanceOf[to] += amount;
         emit Transfer(address(0), to, amount);
     }
 
     function burn(address from, uint256 amount) external onlyAmm {
-        require(from != address(0), "zero from");
+        if (from == address(0)) revert ZeroAddress();
         uint256 bal = balanceOf[from];
-        require(bal >= amount, "balance");
+        if (bal < amount) revert InsufficientBalance();
         balanceOf[from] = bal - amount;
         totalSupply -= amount;
         emit Transfer(from, address(0), amount);
     }
 
     function _transfer(address from, address to, uint256 amount) internal {
-        require(to != address(0), "zero to");
+        if (to == address(0)) revert ZeroAddress();
         uint256 bal = balanceOf[from];
-        require(bal >= amount, "balance");
+        if (bal < amount) revert InsufficientBalance();
         unchecked {
             balanceOf[from] = bal - amount;
             balanceOf[to] += amount;

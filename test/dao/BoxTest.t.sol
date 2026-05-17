@@ -4,11 +4,11 @@ pragma solidity ^0.8.25;
 import {Test} from "forge-std/Test.sol";
 
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {IGovernor}          from "@openzeppelin/contracts/governance/IGovernor.sol";
+import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 
 import {GovernanceToken} from "src/dao/GovernanceToken.sol";
-import {MyGovernor}      from "src/dao/MyGovernor.sol";
-import {Box}             from "src/dao/Box.sol";
+import {MyGovernor} from "src/dao/MyGovernor.sol";
+import {Box} from "src/dao/Box.sol";
 
 contract BoxTest is Test {
     GovernanceToken token;
@@ -23,64 +23,54 @@ contract BoxTest is Test {
     address voter2 = address(2);
 
     function setUp() public {
-    // ---------------- ACTORS ----------------
-    address teamUser = address(10);
-    address treasuryUser = address(11);
-    address airdropUser = address(12);
-    address liquidityUser = address(13);
+        // ---------------- ACTORS ----------------
+        address teamUser = address(10);
+        address treasuryUser = address(11);
+        address airdropUser = address(12);
+        address liquidityUser = address(13);
 
-    // ---------------- TOKEN ----------------
-    token = new GovernanceToken(
-        teamUser,
-        treasuryUser,
-        airdropUser,
-        liquidityUser
-    );
+        // ---------------- TOKEN ----------------
+        token = new GovernanceToken(teamUser, treasuryUser, airdropUser, liquidityUser);
 
-    // ---------------- VOTERS ----------------
-    vm.prank(teamUser);
-    token.transfer(voter1, 100_000 ether);
+        // ---------------- VOTERS ----------------
+        vm.prank(teamUser);
+        token.transfer(voter1, 100_000 ether);
 
-    vm.prank(teamUser);
-    token.transfer(voter2, 200_000 ether);
+        vm.prank(teamUser);
+        token.transfer(voter2, 200_000 ether);
 
-    // ---------------- DELEGATION ----------------
-    vm.prank(voter1);
-    token.delegate(voter1);
+        // ---------------- DELEGATION ----------------
+        vm.prank(voter1);
+        token.delegate(voter1);
 
-    vm.prank(voter2);
-    token.delegate(voter2);
+        vm.prank(voter2);
+        token.delegate(voter2);
 
-    vm.prank(teamUser);
-    token.delegate(teamUser);
+        vm.prank(teamUser);
+        token.delegate(teamUser);
 
-    vm.prank(treasuryUser);
-    token.delegate(treasuryUser);
+        vm.prank(treasuryUser);
+        token.delegate(treasuryUser);
 
-    vm.roll(block.number + 1);
+        vm.roll(block.number + 1);
 
-    // ---------------- TIMELOCK ----------------
-    address[] memory proposers = new address[](0);
-    address[] memory executors = new address[](1);
-    executors[0] = address(0);
+        // ---------------- TIMELOCK ----------------
+        address[] memory proposers = new address[](0);
+        address[] memory executors = new address[](1);
+        executors[0] = address(0);
 
-    timelock = new TimelockController(
-        2 days,
-        proposers,
-        executors,
-        address(this)
-    );
+        timelock = new TimelockController(2 days, proposers, executors, address(this));
 
-    governor = new MyGovernor(token, timelock);
+        governor = new MyGovernor(token, timelock);
 
-    VOTING_DELAY  = governor.votingDelay();
-    VOTING_PERIOD = governor.votingPeriod();
+        VOTING_DELAY = governor.votingDelay();
+        VOTING_PERIOD = governor.votingPeriod();
 
-    timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
-    timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
+        timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
+        timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
 
-    // ---------------- TARGET CONTRACTS ----------------
-    box = new Box(address(timelock));
+        // ---------------- TARGET CONTRACTS ----------------
+        box = new Box(address(timelock));
     }
 
     function test_box_governance_full_flow() public {
@@ -94,12 +84,7 @@ contract BoxTest is Test {
 
         // ---------------- PROPOSE ----------------
         vm.prank(voter1);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            "Set Box = 42"
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, "Set Box = 42");
 
         // ---------------- ACTIVE STATE ----------------
         vm.roll(block.number + VOTING_DELAY + 1); // skip votingDelay
@@ -114,27 +99,14 @@ contract BoxTest is Test {
         // ---------------- QUEUE ----------------
         vm.roll(block.number + VOTING_PERIOD + 1); // skip votingDelay
 
-        governor.queue(
-            targets,
-            values,
-            calldatas,
-            keccak256(bytes("Set Box = 42"))
-        );
+        governor.queue(targets, values, calldatas, keccak256(bytes("Set Box = 42")));
 
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Queued)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Queued));
 
         // ---------------- EXECUTE ----------------
         vm.warp(block.timestamp + 2 days + 1);
 
-        governor.execute(
-            targets,
-            values,
-            calldatas,
-            keccak256(bytes("Set Box = 42"))
-        );
+        governor.execute(targets, values, calldatas, keccak256(bytes("Set Box = 42")));
 
         // ---------------- VERIFY ----------------
         assertEq(box.retrieve(), 42);

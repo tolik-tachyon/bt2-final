@@ -17,14 +17,9 @@ contract PriceFeedConsumer {
     }
 
     function getLatestPrice() external view returns (int256 price, uint256 updatedAt) {
-        (
-            uint80  roundId,
-            int256  price_,
-            uint256 startedAt,
-            uint256 updatedAt_,
-            uint80  answeredInRound
-        ) = priceFeed.latestRoundData();
-        if (startedAt == 0)            revert InvalidRound();
+        (uint80 roundId, int256 price_, uint256 startedAt, uint256 updatedAt_, uint80 answeredInRound) =
+            priceFeed.latestRoundData();
+        if (startedAt == 0) revert InvalidRound();
         if (answeredInRound < roundId) revert InvalidRound();
         // SLITHER-NOTE:
         //     basically, it compares timestamps, and that's how
@@ -32,8 +27,8 @@ contract PriceFeedConsumer {
         //     other way, it needs to compare them.
         // slither-disable-next-line timestamp
         if (block.timestamp - updatedAt_ > stalenessThreshold) revert StalePrice();
-        if (price_ <= 0)               revert InvalidPrice();
-        price     = price_;
+        if (price_ < 1) revert InvalidPrice();
+        price = price_;
         updatedAt = updatedAt_;
     }
 }

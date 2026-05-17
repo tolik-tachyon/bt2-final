@@ -4,10 +4,10 @@ pragma solidity ^0.8.25;
 import {Script, console} from "forge-std/Script.sol";
 
 import {GovernanceToken} from "src/dao/GovernanceToken.sol";
-import {TokenVesting}    from "src/dao/TokenVesting.sol";
-import {MyGovernor}      from "src/dao/MyGovernor.sol";
-import {Treasury}        from "src/dao/Treasury.sol";
-import {Box}             from "src/dao/Box.sol";
+import {TokenVesting} from "src/dao/TokenVesting.sol";
+import {MyGovernor} from "src/dao/MyGovernor.sol";
+import {Treasury} from "src/dao/Treasury.sol";
+import {Box} from "src/dao/Box.sol";
 
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
@@ -22,20 +22,11 @@ contract Deploy is Script {
         address airdrop = msg.sender;
         address liquidity = msg.sender;
 
-        GovernanceToken token = new GovernanceToken(
-            team,
-            treasuryAddr,
-            airdrop,
-            liquidity
-        );
+        GovernanceToken token = new GovernanceToken(team, treasuryAddr, airdrop, liquidity);
 
         // 2. TOKEN VESTING (FIXED)
 
-        TokenVesting vesting = new TokenVesting(
-            address(token),
-            team,
-            block.timestamp
-        );
+        TokenVesting vesting = new TokenVesting(address(token), team, block.timestamp);
 
         // 3. TIMELOCK
 
@@ -46,7 +37,7 @@ contract Deploy is Script {
         TimelockController timelock = new TimelockController(
             // NOTE: 10 seconds - for testing purposes.
             //       Should be changed to bigger value, like 2 days.
-            10, 
+            10,
             proposers,
             executors,
             msg.sender
@@ -56,15 +47,9 @@ contract Deploy is Script {
 
         MyGovernor governor = new MyGovernor(token, timelock);
 
-        timelock.grantRole(
-            timelock.PROPOSER_ROLE(),
-            address(governor)
-        );
+        timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
 
-        timelock.grantRole(
-            timelock.EXECUTOR_ROLE(),
-            address(0)
-        );
+        timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
 
         // 5. TREASURY + BOX
 
@@ -74,12 +59,12 @@ contract Deploy is Script {
         // 6. OUTPUT
 
         console.log("=== DAO DEPLOYED ===");
-        console.log("TOKEN_ADDR=%s",    address(token));
-        console.log("VESTING_ADDR=%s",  address(vesting));
+        console.log("TOKEN_ADDR=%s", address(token));
+        console.log("VESTING_ADDR=%s", address(vesting));
         console.log("GOVERNOR_ADDR=%s", address(governor));
         console.log("TIMELOCK_ADDR=%s", address(timelock));
         console.log("TREASURY_ADDR=%s", address(treasury));
-        console.log("BOX_ADDR=%s",      address(box));
+        console.log("BOX_ADDR=%s", address(box));
 
         vm.stopBroadcast();
     }

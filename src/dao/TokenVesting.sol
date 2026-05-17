@@ -13,9 +13,13 @@ contract TokenVesting {
 
     uint256 public released;
 
+    error ZeroAddressToken();
+    error ZeroAddressBeneficiary();
+    error NothingToRelease();
+
     constructor(address _token, address _beneficiary, uint256 _start) {
-        require(_token       != address(0));
-        require(_beneficiary != address(0));
+        if (_token == address(0)) revert ZeroAddressToken();
+        if (_beneficiary == address(0)) revert ZeroAddressBeneficiary();
         token = IERC20(_token);
         beneficiary = _beneficiary;
         start = _start;
@@ -29,6 +33,10 @@ contract TokenVesting {
         //     it can't avoid compare timestamps
         // slither-disable-next-line timestamp
         if (block.timestamp < start) return 0;
+        // SOLHINT-NOTE:
+        //     solhint wants here '>', but it's not applicable. changing constant
+        //     or adding +/- 1 to convert it to strict one feels clunky
+        // solhint-disable-next-line gas-strict-inequalities
         if (block.timestamp >= start + DURATION) return total;
 
         return (total * (block.timestamp - start)) / DURATION;
@@ -40,8 +48,10 @@ contract TokenVesting {
         // SLITHER-NOTE:
         //     basically, it compares timestamps, and that's how DAO works,
         //     it can't be done in other way, it needs to compare them.
-        // slither-disable-next-line timestamp
-        require(amount > 0, "Nothing to release");
+        //     also, slither complains about "strict comparison", but it's
+        //     justified here, because we explicitly revert on 0 amount
+        // slither-disable-next-line timestamp,incorrect-equality
+        if (amount == 0) revert NothingToRelease();
 
         released = vested;
         token.safeTransfer(beneficiary, amount);

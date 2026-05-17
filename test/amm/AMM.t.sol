@@ -3,28 +3,28 @@ pragma solidity ^0.8.25;
 
 import {Test} from "forge-std/Test.sol";
 
-import {AMM}       from "src/amm/AMM.sol";
-import {LPToken}   from "src/amm/LPToken.sol";
+import {AMM} from "src/amm/AMM.sol";
+import {LPToken} from "src/amm/LPToken.sol";
 import {GameToken} from "src/amm/GameToken.sol";
 
 contract AMMHandler is Test {
-    AMM       amm;
+    AMM amm;
     GameToken tokenA;
     GameToken tokenB;
-    LPToken   lp;
-    address   user = address(0xBEEF);
+    LPToken lp;
+    address user = address(0xBEEF);
 
     constructor(AMM _amm, GameToken _a, GameToken _b, address owner) {
-        amm    = _amm;
+        amm = _amm;
         tokenA = _a;
         tokenB = _b;
-        lp     = _amm.lpToken();
-    
+        lp = _amm.lpToken();
+
         vm.startPrank(owner);
         tokenA.mint(user, 1_000_000 ether);
         tokenB.mint(user, 1_000_000 ether);
         vm.stopPrank();
-    
+
         vm.startPrank(user);
         tokenA.approve(address(amm), type(uint256).max);
         tokenB.approve(address(amm), type(uint256).max);
@@ -55,14 +55,14 @@ contract AMMHandler is Test {
 }
 
 contract AMMTest is Test {
-    AMM       amm;
+    AMM amm;
     GameToken tokenA;
     GameToken tokenB;
-    LPToken   lp;
+    LPToken lp;
     AMMHandler handler;
 
     address alice = address(0xA11CE);
-    address bob   = address(0xB0B);
+    address bob = address(0xB0B);
 
     uint256 constant INITIAL = 1_000_000 ether;
     bool constant TEST_INVARIANCE = true;
@@ -70,13 +70,13 @@ contract AMMTest is Test {
     function setUp() public {
         tokenA = new GameToken("Token A", "TKA", address(this));
         tokenB = new GameToken("Token B", "TKB", address(this));
-        amm    = new AMM(address(tokenA), address(tokenB));
-        lp     = amm.lpToken();
+        amm = new AMM(address(tokenA), address(tokenB));
+        lp = amm.lpToken();
 
         tokenA.mint(alice, INITIAL);
         tokenB.mint(alice, INITIAL);
-        tokenA.mint(bob,   INITIAL);
-        tokenB.mint(bob,   INITIAL);
+        tokenA.mint(bob, INITIAL);
+        tokenB.mint(bob, INITIAL);
 
         vm.startPrank(alice);
         tokenA.approve(address(amm), type(uint256).max);
@@ -114,12 +114,12 @@ contract AMMTest is Test {
     }
 
     function test_constructor_revertsZeroAddress() public {
-        vm.expectRevert();
+        vm.expectRevert(AMM.ZeroAddressA.selector);
         new AMM(address(0), address(tokenB));
     }
 
     function test_constructor_revertsIdenticalTokens() public {
-        vm.expectRevert();
+        vm.expectRevert(AMM.IdenticalTokens.selector);
         new AMM(address(tokenA), address(tokenA));
     }
 
@@ -148,21 +148,21 @@ contract AMMTest is Test {
     }
 
     function test_addLiquidity_revertsZeroAmount() public {
-        vm.expectRevert();
+        vm.expectRevert(AMM.ZeroAmountA.selector);
         vm.prank(alice);
         amm.addLiquidity(0, 1000 ether, 0, 0);
     }
 
     function test_addLiquidity_slippageA() public {
         _addLiquidity(alice, 1000 ether, 1000 ether);
-        vm.expectRevert("slippage A");
+        vm.expectRevert(AMM.SlippageA.selector);
         vm.prank(bob);
         amm.addLiquidity(500 ether, 500 ether, 600 ether, 0);
     }
 
     function test_addLiquidity_slippageB() public {
         _addLiquidity(alice, 1000 ether, 2000 ether);
-        vm.expectRevert("slippage B");
+        vm.expectRevert(AMM.SlippageB.selector);
         vm.prank(bob);
         amm.addLiquidity(500 ether, 500 ether, 0, 600 ether);
     }
@@ -203,7 +203,7 @@ contract AMMTest is Test {
 
     function test_removeLiquidity_revertsZero() public {
         _addLiquidity(alice, 1000 ether, 1000 ether);
-        vm.expectRevert();
+        vm.expectRevert(AMM.ZeroAmount.selector);
         vm.prank(alice);
         amm.removeLiquidity(0, 0, 0);
     }
@@ -213,7 +213,7 @@ contract AMMTest is Test {
 
         vm.startPrank(alice);
         lp.approve(address(amm), lpAmt);
-        vm.expectRevert("slippage A");
+        vm.expectRevert(AMM.SlippageA.selector);
         amm.removeLiquidity(lpAmt, type(uint256).max, 0);
         vm.stopPrank();
     }
@@ -257,21 +257,21 @@ contract AMMTest is Test {
 
     function test_swap_revertsInvalidToken() public {
         _addLiquidity(alice, 1000 ether, 1000 ether);
-        vm.expectRevert("invalid token");
+        vm.expectRevert(AMM.InvalidToken.selector);
         vm.prank(bob);
         amm.swap(address(0xdead), 100 ether, 0);
     }
 
     function test_swap_revertsZeroAmount() public {
         _addLiquidity(alice, 1000 ether, 1000 ether);
-        vm.expectRevert("zero amount");
+        vm.expectRevert(AMM.ZeroAmountIn.selector);
         vm.prank(bob);
         amm.swap(address(tokenA), 0, 0);
     }
 
     function test_swap_revertsSlippage() public {
         _addLiquidity(alice, 1000 ether, 1000 ether);
-        vm.expectRevert("slippage");
+        vm.expectRevert(AMM.Slippage.selector);
         vm.prank(bob);
         amm.swap(address(tokenA), 100 ether, type(uint256).max);
     }
@@ -305,13 +305,13 @@ contract AMMTest is Test {
 
     function test_getAmountOut_matchesYul() public view {
         uint256 a = 1000 ether;
-        uint256 rIn  = 100_000 ether;
+        uint256 rIn = 100_000 ether;
         uint256 rOut = 100_000 ether;
         assertEq(amm.getAmountOut(a, rIn, rOut), amm.getAmountOutYul(a, rIn, rOut));
     }
 
     function test_getAmountOut_revertsZeroReserve() public {
-        vm.expectRevert("empty reserves");
+        vm.expectRevert(AMM.EmptyReserveIn.selector);
         amm.getAmountOut(100, 0, 1000);
     }
 

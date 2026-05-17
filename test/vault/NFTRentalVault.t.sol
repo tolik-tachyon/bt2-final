@@ -6,19 +6,19 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {NFTRentalVault} from "src/vault/NFTRentalVault.sol";
 import {GovernanceToken} from "src/dao/GovernanceToken.sol";
-import {Equestria1155}  from "src/amm/Equestria1155.sol";
+import {Equestria1155} from "src/amm/Equestria1155.sol";
 
 contract NFTRentalVaultTest is Test {
     NFTRentalVault vault;
     GovernanceToken govToken;
-    Equestria1155   nft;
+    Equestria1155 nft;
 
     address owner = address(0x0999);
     address alice = address(0xA11CE);
-    address bob   = address(0xB0B);
+    address bob = address(0xB0B);
 
     uint256 NFT_ID;
-    uint256 constant DEPOSIT   = 1000 ether;
+    uint256 constant DEPOSIT = 1000 ether;
 
     function setUp() public {
         // deploy governance token
@@ -29,29 +29,30 @@ contract NFTRentalVaultTest is Test {
 
         // deploy vault
         NFT_ID = nft.PINKIE_PIE();
-        vault = new NFTRentalVault(
-            IERC20(address(govToken)),
-            nft,
-            NFT_ID,
-            owner
-        );
+        vault = new NFTRentalVault(IERC20(address(govToken)), nft, NFT_ID, owner);
 
         // fund alice and bob
         vm.startPrank(owner);
         IERC20(address(govToken)).transfer(alice, 100_000 ether);
-        IERC20(address(govToken)).transfer(bob,   100_000 ether);
+        IERC20(address(govToken)).transfer(bob, 100_000 ether);
         IERC20(address(govToken)).transfer(owner, 10_000 ether);
         vm.stopPrank();
 
         // mint NFT to alice
-        uint256[] memory ids    = new uint256[](6);
+        uint256[] memory ids = new uint256[](6);
         uint256[] memory values = new uint256[](6);
-        ids[0]=1; values[0]=100;
-        ids[1]=2; values[1]=100;
-        ids[2]=3; values[2]=200;
-        ids[3]=4; values[3]=100;
-        ids[4]=5; values[4]=100;
-        ids[5]=6; values[5]=100;
+        ids[0] = 1;
+        values[0] = 100;
+        ids[1] = 2;
+        values[1] = 100;
+        ids[2] = 3;
+        values[2] = 200;
+        ids[3] = 4;
+        values[3] = 100;
+        ids[4] = 5;
+        values[4] = 100;
+        ids[5] = 6;
+        values[5] = 100;
         nft.mintBatch(alice, ids, values, "");
 
         // craft NFT so alice has PINKIE_PIE
@@ -120,7 +121,7 @@ contract NFTRentalVaultTest is Test {
     function test_stakeNFT_wrongId() public {
         vm.startPrank(alice);
         nft.setApprovalForAll(address(vault), true);
-        vm.expectRevert("wrong nft");
+        vm.expectRevert(NFTRentalVault.WrongNft.selector);
         vault.stakeNFT(9999);
         vm.stopPrank();
     }
@@ -129,7 +130,7 @@ contract NFTRentalVaultTest is Test {
         vm.startPrank(alice);
         nft.setApprovalForAll(address(vault), true);
         vault.stakeNFT(NFT_ID);
-        vm.expectRevert("already staked");
+        vm.expectRevert(NFTRentalVault.AlreadyStaked.selector);
         vault.stakeNFT(NFT_ID);
         vm.stopPrank();
     }
@@ -149,7 +150,7 @@ contract NFTRentalVaultTest is Test {
         nft.setApprovalForAll(address(vault), true);
         vault.stakeNFT(NFT_ID);
         vm.stopPrank();
-        vm.expectRevert("not renter");
+        vm.expectRevert(NFTRentalVault.NotRenter.selector);
         vm.prank(bob);
         vault.unstakeNFT(NFT_ID);
     }
@@ -182,7 +183,7 @@ contract NFTRentalVaultTest is Test {
 
     function test_setBoostBps_belowBaseReverts() public {
         vm.prank(owner);
-        vm.expectRevert("boost below 1x");
+        vm.expectRevert(NFTRentalVault.BoostBelowBase.selector);
         vault.setBoostBps(500);
     }
 
@@ -208,7 +209,7 @@ contract NFTRentalVaultTest is Test {
     function testFuzz_depositRedeem_roundingInvariant(uint256 assets) public {
         assets = bound(assets, 1e6, 50_000 ether);
         vm.startPrank(alice);
-        uint256 shares   = vault.deposit(assets, alice);
+        uint256 shares = vault.deposit(assets, alice);
         uint256 redeemed = vault.redeem(shares, alice, alice);
         vm.stopPrank();
         // rounding must never give back more than deposited
@@ -218,7 +219,7 @@ contract NFTRentalVaultTest is Test {
     function testFuzz_previewDeposit_neverOverestimates(uint256 assets) public view {
         assets = bound(assets, 1, 100_000 ether);
         uint256 preview = vault.previewDeposit(assets);
-        uint256 actual  = vault.convertToShares(assets);
+        uint256 actual = vault.convertToShares(assets);
         assertLe(preview, actual + 1);
     }
 }

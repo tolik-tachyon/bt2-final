@@ -3,17 +3,17 @@ pragma solidity ^0.8.25;
 
 import {Test} from "forge-std/Test.sol";
 
-import {VRFConsumer}        from "src/chainlink/VRFConsumer.sol";
+import {VRFConsumer} from "src/chainlink/VRFConsumer.sol";
 import {MockVRFCoordinator} from "src/chainlink/mocks/MockVRFCoordinator.sol";
 
 contract VRFConsumerTest is Test {
-    VRFConsumer        vrfConsumer;
+    VRFConsumer vrfConsumer;
     MockVRFCoordinator coordinator;
 
     address alice = address(0xA11CE);
 
     bytes32 constant KEY_HASH = bytes32("keyhash");
-    uint256 constant SUB_ID   = 1;
+    uint256 constant SUB_ID = 1;
 
     function setUp() public {
         coordinator = new MockVRFCoordinator();
@@ -71,14 +71,16 @@ contract VRFConsumerTest is Test {
         vm.prank(bob);
         uint256 reqB = vrfConsumer.requestRandom();
 
-        uint256[] memory wordsA = new uint256[](1); wordsA[0] = 111;
-        uint256[] memory wordsB = new uint256[](1); wordsB[0] = 222;
+        uint256[] memory wordsA = new uint256[](1);
+        wordsA[0] = 111;
+        uint256[] memory wordsB = new uint256[](1);
+        wordsB[0] = 222;
 
         coordinator.fulfillRandomWords(reqA, wordsA);
         coordinator.fulfillRandomWords(reqB, wordsB);
 
         assertEq(vrfConsumer.lastRandomResult(alice), 111);
-        assertEq(vrfConsumer.lastRandomResult(bob),   222);
+        assertEq(vrfConsumer.lastRandomResult(bob), 222);
     }
 
     function testFuzz_fulfillRandomWords_anyWord(uint256 word) public {

@@ -5,19 +5,22 @@ contract Box {
     address public immutable timelock;
     uint256 private _value;
 
-    event ValueChanged(uint256 value);
+    event ValueChanged(uint256 indexed value);
 
-     modifier onlyTimelock() {
-         _onlyTimelock();
-         _;
-     }
+    error NotTimelock();
+    error ZeroAddress();
 
-     function _onlyTimelock() internal view {
-         require(msg.sender == timelock, "Not timelock");
-     }
+    modifier onlyTimelock() {
+        _onlyTimelock();
+        _;
+    }
+
+    function _onlyTimelock() internal view {
+        if (msg.sender != timelock) revert NotTimelock();
+    }
 
     constructor(address _timelock) {
-        require(_timelock != address(0));
+        if (_timelock == address(0)) revert ZeroAddress();
         timelock = _timelock;
     }
 

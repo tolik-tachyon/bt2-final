@@ -16,12 +16,7 @@ contract GovernanceTokenTest is Test {
     address voter = address(10);
 
     function setUp() public {
-        token = new GovernanceToken(
-            teamUser,
-            treasuryUser,
-            airdropUser,
-            liquidityUser
-        );
+        token = new GovernanceToken(teamUser, treasuryUser, airdropUser, liquidityUser);
     }
 
     // 1. correct initial distribution
@@ -65,14 +60,16 @@ contract GovernanceTokenTest is Test {
             abi.encodePacked(
                 "\x19\x01",
                 token.DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(
-                    keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
-                    owner,
-                    address(this),
-                    100 ether,
-                    nonce,
-                    deadline
-                ))
+                keccak256(
+                    abi.encode(
+                        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                        owner,
+                        address(this),
+                        100 ether,
+                        nonce,
+                        deadline
+                    )
+                )
             )
         );
 
@@ -85,21 +82,21 @@ contract GovernanceTokenTest is Test {
 
     // 5. delegation changes voting power dynamically
     function testDelegationUpdate() public {
-    vm.prank(treasuryUser);
-    token.transfer(voter, 1000 ether);
+        vm.prank(treasuryUser);
+        token.transfer(voter, 1000 ether);
 
-    vm.prank(voter);
-    token.delegate(voter);
+        vm.prank(voter);
+        token.delegate(voter);
 
-    vm.roll(block.number + 1);
+        vm.roll(block.number + 1);
 
-    uint256 before = token.getVotes(voter);
+        uint256 before = token.getVotes(voter);
 
-    vm.prank(voter);
-    token.transfer(address(20), 100 ether);
+        vm.prank(voter);
+        token.transfer(address(20), 100 ether);
 
-    vm.roll(block.number + 1);
+        vm.roll(block.number + 1);
 
-    assertLt(token.getVotes(voter), before);
+        assertLt(token.getVotes(voter), before);
     }
 }

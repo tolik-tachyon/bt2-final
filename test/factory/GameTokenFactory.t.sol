@@ -6,20 +6,20 @@ import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {GameTokenFactory} from "src/factory/GameTokenFactory.sol";
-import {GameTokenV1}      from "src/factory/GameTokenV1.sol";
-import {GameTokenV2}      from "src/factory/GameTokenV2.sol";
+import {GameTokenV1} from "src/factory/GameTokenV1.sol";
+import {GameTokenV2} from "src/factory/GameTokenV2.sol";
 
 contract GameTokenFactoryTest is Test {
     GameTokenFactory factory;
-    GameTokenV1      impl1;
-    GameTokenV2      impl2;
+    GameTokenV1 impl1;
+    GameTokenV2 impl2;
 
     address alice = address(0xA11CE);
 
     function setUp() public {
         factory = new GameTokenFactory();
-        impl1   = new GameTokenV1();
-        impl2   = new GameTokenV2();
+        impl1 = new GameTokenV1();
+        impl2 = new GameTokenV2();
     }
 
     // -- helpers -----------------------------------------------
@@ -69,7 +69,7 @@ contract GameTokenFactoryTest is Test {
     function test_create2_deterministicAddress() public {
         bytes32 salt = bytes32("mysalt");
         address predicted = factory.predictAddress("Gold", "GLD", salt);
-        address actual    = factory.createToken2("Gold", "GLD", salt);
+        address actual = factory.createToken2("Gold", "GLD", salt);
         assertEq(actual, predicted);
     }
 
@@ -150,21 +150,15 @@ contract GameTokenFactoryTest is Test {
     function test_upgrade_v2_initializeCap() public {
         GameTokenV1 proxy = _proxy(alice);
         vm.prank(alice);
-        proxy.upgradeToAndCall(
-            address(impl2),
-            abi.encodeCall(GameTokenV2.initializeV2, (1000 ether))
-        );
+        proxy.upgradeToAndCall(address(impl2), abi.encodeCall(GameTokenV2.initializeV2, (1000 ether)));
         assertEq(GameTokenV2(address(proxy)).mintCap(), 1000 ether);
     }
 
     function test_upgrade_v2_capEnforced() public {
         GameTokenV1 proxy = _proxy(alice);
         vm.startPrank(alice);
-        proxy.upgradeToAndCall(
-            address(impl2),
-            abi.encodeCall(GameTokenV2.initializeV2, (1000 ether))
-        );
-        vm.expectRevert("cap exceeded");
+        proxy.upgradeToAndCall(address(impl2), abi.encodeCall(GameTokenV2.initializeV2, (1000 ether)));
+        vm.expectRevert(GameTokenV2.CapExceeded.selector);
         GameTokenV2(address(proxy)).mint(alice, 1001 ether);
         vm.stopPrank();
     }
@@ -172,10 +166,7 @@ contract GameTokenFactoryTest is Test {
     function test_upgrade_v2_mintUnderCap() public {
         GameTokenV1 proxy = _proxy(alice);
         vm.startPrank(alice);
-        proxy.upgradeToAndCall(
-            address(impl2),
-            abi.encodeCall(GameTokenV2.initializeV2, (1000 ether))
-        );
+        proxy.upgradeToAndCall(address(impl2), abi.encodeCall(GameTokenV2.initializeV2, (1000 ether)));
         GameTokenV2(address(proxy)).mint(alice, 999 ether);
         vm.stopPrank();
         assertEq(GameTokenV2(address(proxy)).balanceOf(alice), 999 ether);

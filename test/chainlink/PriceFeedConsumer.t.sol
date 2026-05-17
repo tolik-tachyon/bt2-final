@@ -3,17 +3,17 @@ pragma solidity ^0.8.25;
 
 import {Test} from "forge-std/Test.sol";
 
-import {PriceFeedConsumer}  from "src/chainlink/PriceFeedConsumer.sol";
-import {MockAggregator}     from "src/chainlink/mocks/MockAggregator.sol";
+import {PriceFeedConsumer} from "src/chainlink/PriceFeedConsumer.sol";
+import {MockAggregator} from "src/chainlink/mocks/MockAggregator.sol";
 
 contract PriceFeedConsumerTest is Test {
     PriceFeedConsumer consumer;
-    MockAggregator    feed;
+    MockAggregator feed;
 
     uint256 constant STALENESS = 1 hours;
 
     function setUp() public {
-        feed     = new MockAggregator(2000e8); // $2000
+        feed = new MockAggregator(2000e8); // $2000
         consumer = new PriceFeedConsumer(address(feed), STALENESS);
     }
 

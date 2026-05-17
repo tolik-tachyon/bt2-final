@@ -4,12 +4,12 @@ pragma solidity ^0.8.25;
 import {Test} from "forge-std/Test.sol";
 
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {IGovernor}          from "@openzeppelin/contracts/governance/IGovernor.sol";
+import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 
 import {GovernanceToken} from "src/dao/GovernanceToken.sol";
-import {MyGovernor}      from "src/dao/MyGovernor.sol";
-import {Box}             from "src/dao/Box.sol";
-import {Treasury}        from "src/dao/Treasury.sol";
+import {MyGovernor} from "src/dao/MyGovernor.sol";
+import {Box} from "src/dao/Box.sol";
+import {Treasury} from "src/dao/Treasury.sol";
 
 contract FullFlowTest is Test {
     GovernanceToken token;
@@ -31,12 +31,7 @@ contract FullFlowTest is Test {
         address airdropUser = address(12);
         address liquidityUser = address(13);
 
-        token = new GovernanceToken(
-            teamUser,
-            treasuryUser,
-            airdropUser,
-            liquidityUser
-        );
+        token = new GovernanceToken(teamUser, treasuryUser, airdropUser, liquidityUser);
 
         deal(address(token), alice, 1_000_000 ether);
         deal(address(token), bob, 1_000_000 ether);
@@ -56,17 +51,12 @@ contract FullFlowTest is Test {
         address[] memory executors = new address[](1);
         executors[0] = address(0);
 
-        timelock = new TimelockController(
-            2 days,
-            proposers,
-            executors,
-            address(this)
-        );
+        timelock = new TimelockController(2 days, proposers, executors, address(this));
 
         // GOVERNOR
         governor = new MyGovernor(token, timelock);
 
-        VOTING_DELAY  = governor.votingDelay();
+        VOTING_DELAY = governor.votingDelay();
         VOTING_PERIOD = governor.votingPeriod();
 
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
@@ -90,12 +80,7 @@ contract FullFlowTest is Test {
         string memory description = "Set Box to 42";
 
         vm.prank(alice);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            description
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // move to active voting
         vm.roll(block.number + VOTING_DELAY + 1);
@@ -111,10 +96,7 @@ contract FullFlowTest is Test {
 
         bytes32 descHash = keccak256(bytes(description));
 
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Succeeded)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Succeeded));
 
         governor.queue(targets, values, calldatas, descHash);
 
@@ -134,11 +116,7 @@ contract FullFlowTest is Test {
 
         bytes[] memory c2 = new bytes[](1);
         uint256 sent = 5 ether;
-        c2[0] = abi.encodeWithSignature(
-            "withdrawETH(address,uint256)",
-            alice,
-            sent
-        );
+        c2[0] = abi.encodeWithSignature("withdrawETH(address,uint256)", alice, sent);
 
         string memory desc2 = "Send ETH";
 
@@ -157,10 +135,7 @@ contract FullFlowTest is Test {
 
         bytes32 descHash2 = keccak256(bytes(desc2));
 
-        assertEq(
-            uint256(governor.state(proposal2)),
-            uint256(IGovernor.ProposalState.Succeeded)
-        );
+        assertEq(uint256(governor.state(proposal2)), uint256(IGovernor.ProposalState.Succeeded));
 
         governor.queue(t2, v2, c2, descHash2);
 

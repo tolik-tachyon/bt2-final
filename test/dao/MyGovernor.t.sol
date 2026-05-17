@@ -4,11 +4,11 @@ pragma solidity ^0.8.25;
 import {Test} from "forge-std/Test.sol";
 
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {IGovernor}          from "@openzeppelin/contracts/governance/IGovernor.sol";
+import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 
 import {GovernanceToken} from "src/dao/GovernanceToken.sol";
-import {MyGovernor}      from "src/dao/MyGovernor.sol";
-import {Box}             from "src/dao/Box.sol";
+import {MyGovernor} from "src/dao/MyGovernor.sol";
+import {Box} from "src/dao/Box.sol";
 
 contract MyGovernorTest is Test {
     GovernanceToken token;
@@ -28,47 +28,37 @@ contract MyGovernorTest is Test {
     address voter2 = address(2);
 
     function setUp() public {
-    token = new GovernanceToken(
-        teamUser,
-        treasuryUser,
-        airdropUser,
-        liquidityUser
-    );
+        token = new GovernanceToken(teamUser, treasuryUser, airdropUser, liquidityUser);
 
-    vm.prank(liquidityUser);
-    token.transfer(voter1, 30_000 ether);
+        vm.prank(liquidityUser);
+        token.transfer(voter1, 30_000 ether);
 
-    vm.prank(liquidityUser);
-    token.transfer(voter2, 60_000 ether);
+        vm.prank(liquidityUser);
+        token.transfer(voter2, 60_000 ether);
 
-    vm.prank(voter1);
-    token.delegate(voter1);
+        vm.prank(voter1);
+        token.delegate(voter1);
 
-    vm.prank(voter2);
-    token.delegate(voter2);
+        vm.prank(voter2);
+        token.delegate(voter2);
 
-    vm.roll(block.number + VOTING_DELAY + 1);
+        vm.roll(block.number + VOTING_DELAY + 1);
 
-    address[] memory proposers = new address[](0);
-    address[] memory executors = new address[](1);
-    executors[0] = address(0);
+        address[] memory proposers = new address[](0);
+        address[] memory executors = new address[](1);
+        executors[0] = address(0);
 
-    timelock = new TimelockController(
-        2 days,
-        proposers,
-        executors,
-        address(this)
-    );
+        timelock = new TimelockController(2 days, proposers, executors, address(this));
 
-    governor = new MyGovernor(token, timelock);
+        governor = new MyGovernor(token, timelock);
 
-    VOTING_DELAY  = governor.votingDelay();
-    VOTING_PERIOD = governor.votingPeriod();
+        VOTING_DELAY = governor.votingDelay();
+        VOTING_PERIOD = governor.votingPeriod();
 
-    timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
-    timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
+        timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
+        timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0));
 
-    box = new Box(address(timelock));
+        box = new Box(address(timelock));
     }
 
     // =========================================================
@@ -107,10 +97,7 @@ contract MyGovernorTest is Test {
         uint256 id = _proposal();
         vm.roll(block.number + VOTING_DELAY + 1);
 
-        assertEq(
-            uint256(governor.state(id)),
-            uint256(IGovernor.ProposalState.Active)
-        );
+        assertEq(uint256(governor.state(id)), uint256(IGovernor.ProposalState.Active));
     }
 
     // =========================================================
@@ -161,15 +148,15 @@ contract MyGovernorTest is Test {
     // 6. delegation gives voting power
     // =========================================================
     function test_delegation() public {
-    vm.prank(address(10));
-    token.transfer(voter1, 1000 ether);
+        vm.prank(address(10));
+        token.transfer(voter1, 1000 ether);
 
-    vm.roll(block.number + VOTING_DELAY + 1);
+        vm.roll(block.number + VOTING_DELAY + 1);
 
-    vm.prank(voter1);
-    token.delegate(voter1);
+        vm.prank(voter1);
+        token.delegate(voter1);
 
-    assertGt(token.getVotes(voter1), 0);
+        assertGt(token.getVotes(voter1), 0);
     }
 
     // =========================================================
@@ -186,10 +173,7 @@ contract MyGovernorTest is Test {
 
         vm.roll(block.number + VOTING_PERIOD + 1);
 
-        assertEq(
-            uint256(governor.state(id)),
-            uint256(IGovernor.ProposalState.Succeeded)
-        );
+        assertEq(uint256(governor.state(id)), uint256(IGovernor.ProposalState.Succeeded));
     }
 
     // =========================================================
@@ -206,12 +190,7 @@ contract MyGovernorTest is Test {
 
         vm.roll(block.number + VOTING_PERIOD + 1);
 
-        governor.queue(
-            _targets(),
-            _values(),
-            _calldatas(),
-            _descHash()
-        );
+        governor.queue(_targets(), _values(), _calldatas(), _descHash());
     }
 
     // =========================================================
@@ -228,21 +207,11 @@ contract MyGovernorTest is Test {
 
         vm.roll(block.number + VOTING_PERIOD + 1);
 
-        governor.queue(
-            _targets(),
-            _values(),
-            _calldatas(),
-            _descHash()
-        );
+        governor.queue(_targets(), _values(), _calldatas(), _descHash());
 
         vm.warp(block.timestamp + 2 days + 1);
 
-        governor.execute(
-            _targets(),
-            _values(),
-            _calldatas(),
-            _descHash()
-        );
+        governor.execute(_targets(), _values(), _calldatas(), _descHash());
 
         assertEq(box.retrieve(), 42);
     }
@@ -255,10 +224,7 @@ contract MyGovernorTest is Test {
 
         vm.roll(block.number + VOTING_DELAY + VOTING_PERIOD + 1);
 
-        assertEq(
-            uint256(governor.state(id)),
-            uint256(IGovernor.ProposalState.Defeated)
-        );
+        assertEq(uint256(governor.state(id)), uint256(IGovernor.ProposalState.Defeated));
     }
 
     // =========================================================
@@ -284,21 +250,11 @@ contract MyGovernorTest is Test {
 
         vm.roll(block.number + VOTING_PERIOD + 1);
 
-        governor.queue(
-            _targets(),
-            _values(),
-            _calldatas(),
-            _descHash()
-        );
+        governor.queue(_targets(), _values(), _calldatas(), _descHash());
 
         vm.warp(block.timestamp + 2 days + 1);
 
-        governor.execute(
-            _targets(),
-            _values(),
-            _calldatas(),
-            _descHash()
-        );
+        governor.execute(_targets(), _values(), _calldatas(), _descHash());
 
         assertEq(box.retrieve(), 42);
     }
@@ -313,7 +269,8 @@ contract MyGovernorTest is Test {
         vm.prank(poorUser);
         token.delegate(poorUser);
         vm.roll(block.number + VOTING_DELAY + 1);
-        address[] memory t = new address[](1); t[0] = address(box);
+        address[] memory t = new address[](1);
+        t[0] = address(box);
         uint256[] memory v = new uint256[](1);
         bytes[] memory c = new bytes[](1);
         c[0] = abi.encodeWithSignature("store(uint256)", 1);
@@ -332,10 +289,7 @@ contract MyGovernorTest is Test {
         vm.prank(voter1);
         governor.castVote(id, 1); // votes FOR but quorum not met
         vm.roll(block.number + VOTING_PERIOD + 1);
-        assertEq(
-            uint256(governor.state(id)),
-            uint256(IGovernor.ProposalState.Defeated)
-        );
+        assertEq(uint256(governor.state(id)), uint256(IGovernor.ProposalState.Defeated));
     }
 
     // =========================================================

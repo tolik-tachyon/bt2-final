@@ -4,7 +4,7 @@ pragma solidity ^0.8.25;
 import {Test} from "forge-std/Test.sol";
 
 import {GovernanceToken} from "src/dao/GovernanceToken.sol";
-import {TokenVesting}    from "src/dao/TokenVesting.sol";
+import {TokenVesting} from "src/dao/TokenVesting.sol";
 
 contract TokenVestingTest is Test {
     GovernanceToken token;
@@ -18,25 +18,16 @@ contract TokenVestingTest is Test {
     uint256 constant INITIAL_TRANSFER = 400_000 ether;
 
     function setUp() public {
-    token = new GovernanceToken(
-        teamUser,
-        treasuryUser,
-        airdropUser,
-        liquidityUser
-    );
+        token = new GovernanceToken(teamUser, treasuryUser, airdropUser, liquidityUser);
 
-    vm.prank(teamUser);
-    token.transfer(address(this), INITIAL_TRANSFER);
+        vm.prank(teamUser);
+        token.transfer(address(this), INITIAL_TRANSFER);
 
-    vesting = new TokenVesting(
-        address(token),
-        teamUser,
-        block.timestamp
-    );
+        vesting = new TokenVesting(address(token), teamUser, block.timestamp);
 
-    // send tokens into vesting contract
-    token.transfer(address(vesting), INITIAL_TRANSFER);
-}
+        // send tokens into vesting contract
+        token.transfer(address(vesting), INITIAL_TRANSFER);
+    }
 
     // 1. vesting starts at zero
     function testInitialVesting() public view {
@@ -70,7 +61,7 @@ contract TokenVestingTest is Test {
     }
 
     function testCannotReleaseBeforeVesting() public {
-        vm.expectRevert("Nothing to release");
+        vm.expectRevert(TokenVesting.NothingToRelease.selector);
         vesting.release();
     }
 }

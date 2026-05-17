@@ -17,13 +17,10 @@ contract GoodReceiver is IERC1155Receiver {
         return interfaceId == type(IERC1155).interfaceId;
     }
 
-    function onERC1155Received(
-        address operator,
-        address from,
-        uint256 id,
-        uint256 value,
-        bytes calldata data
-    ) external returns (bytes4) {
+    function onERC1155Received(address operator, address from, uint256 id, uint256 value, bytes calldata data)
+        external
+        returns (bytes4)
+    {
         emit SingleReceived(operator, from, id, value, data);
         return IERC1155Receiver.onERC1155Received.selector;
     }
@@ -46,23 +43,15 @@ contract BadReceiver is IERC1155Receiver {
         return interfaceId == type(IERC1155).interfaceId;
     }
 
-    function onERC1155Received(
-        address,
-        address,
-        uint256,
-        uint256,
-        bytes calldata
-    ) external pure returns (bytes4) {
+    function onERC1155Received(address, address, uint256, uint256, bytes calldata) external pure returns (bytes4) {
         return 0x00000000;
     }
 
-    function onERC1155BatchReceived(
-        address,
-        address,
-        uint256[] calldata,
-        uint256[] calldata,
-        bytes calldata
-    ) external pure returns (bytes4) {
+    function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata)
+        external
+        pure
+        returns (bytes4)
+    {
         return 0x00000000;
     }
 }
@@ -73,7 +62,7 @@ contract Equestria1155Test is Test {
     BadReceiver internal badReceiver;
 
     address internal alice = address(0xA11CE);
-    address internal bob   = address(0xB0B);
+    address internal bob = address(0xB0B);
 
     function setUp() public {
         token = new Equestria1155("ipfs://game/{id}");
@@ -84,12 +73,18 @@ contract Equestria1155Test is Test {
         uint256[] memory ids = new uint256[](6);
         uint256[] memory values = new uint256[](6);
 
-        ids[0] = token.HONESTY();    values[0] = 100;
-        ids[1] = token.KINDNESS();   values[1] = 100;
-        ids[2] = token.LAUGHTER();   values[2] = 200;
-        ids[3] = token.GENEROSITY(); values[3] = 100;
-        ids[4] = token.LOYALTY();    values[4] = 100;
-        ids[5] = token.MAGIC();      values[5] = 100;
+        ids[0] = token.HONESTY();
+        values[0] = 100;
+        ids[1] = token.KINDNESS();
+        values[1] = 100;
+        ids[2] = token.LAUGHTER();
+        values[2] = 200;
+        ids[3] = token.GENEROSITY();
+        values[3] = 100;
+        ids[4] = token.LOYALTY();
+        values[4] = 100;
+        ids[5] = token.MAGIC();
+        values[5] = 100;
 
         token.mintBatch(alice, ids, values, "");
         token.mintBatch(bob, ids, values, "");
@@ -104,9 +99,12 @@ contract Equestria1155Test is Test {
         uint256[] memory ids = new uint256[](3);
         uint256[] memory values = new uint256[](3);
 
-        ids[0] = token.HONESTY();   values[0] = 7;
-        ids[1] = token.KINDNESS();  values[1] = 8;
-        ids[2] = token.LAUGHTER();  values[2] = 9;
+        ids[0] = token.HONESTY();
+        values[0] = 7;
+        ids[1] = token.KINDNESS();
+        values[1] = 8;
+        ids[2] = token.LAUGHTER();
+        values[2] = 9;
 
         token.mintBatch(bob, ids, values, "");
 
@@ -119,9 +117,12 @@ contract Equestria1155Test is Test {
         address[] memory owners = new address[](3);
         uint256[] memory ids = new uint256[](3);
 
-        owners[0] = alice; ids[0] = token.HONESTY();
-        owners[1] = alice; ids[1] = token.KINDNESS();
-        owners[2] = alice; ids[2] = token.LAUGHTER();
+        owners[0] = alice;
+        ids[0] = token.HONESTY();
+        owners[1] = alice;
+        ids[1] = token.KINDNESS();
+        owners[2] = alice;
+        ids[2] = token.LAUGHTER();
 
         uint256[] memory balances = token.balanceOfBatch(owners, ids);
 
@@ -131,11 +132,7 @@ contract Equestria1155Test is Test {
     }
 
     function testUriSubstitution() public view {
-        string memory expected = string.concat(
-            "ipfs://game/",
-            _toHex64(token.PINKIE_PIE()),
-            ".json"
-        );
+        string memory expected = string.concat("ipfs://game/", _toHex64(token.PINKIE_PIE()), ".json");
         assertEq(token.uri(token.PINKIE_PIE()), expected);
     }
 
@@ -144,12 +141,12 @@ contract Equestria1155Test is Test {
         vm.prank(alice);
         token.craft(id);
 
-        assertEq(token.balanceOf(alice, token.HONESTY()),    85);
-        assertEq(token.balanceOf(alice, token.KINDNESS()),   90);
-        assertEq(token.balanceOf(alice, token.LAUGHTER()),   100);
+        assertEq(token.balanceOf(alice, token.HONESTY()), 85);
+        assertEq(token.balanceOf(alice, token.KINDNESS()), 90);
+        assertEq(token.balanceOf(alice, token.LAUGHTER()), 100);
         assertEq(token.balanceOf(alice, token.GENEROSITY()), 80);
-        assertEq(token.balanceOf(alice, token.LOYALTY()),    95);
-        assertEq(token.balanceOf(alice, token.MAGIC()),      100);
+        assertEq(token.balanceOf(alice, token.LOYALTY()), 95);
+        assertEq(token.balanceOf(alice, token.MAGIC()), 100);
         assertEq(token.balanceOf(alice, token.PINKIE_PIE()), 1);
     }
 
@@ -181,8 +178,10 @@ contract Equestria1155Test is Test {
 
         uint256[] memory ids = new uint256[](2);
         uint256[] memory values = new uint256[](2);
-        ids[0] = token.KINDNESS(); values[0] = 11;
-        ids[1] = token.MAGIC();    values[1] = 12;
+        ids[0] = token.KINDNESS();
+        values[0] = 11;
+        ids[1] = token.MAGIC();
+        values[1] = 12;
 
         token.safeBatchTransferFrom(alice, address(goodReceiver), ids, values, "0x1234");
 
