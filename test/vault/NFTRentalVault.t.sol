@@ -6,11 +6,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {NFTRentalVault} from "src/vault/NFTRentalVault.sol";
 import {GovernanceToken} from "src/dao/GovernanceToken.sol";
+import {MockVRFCoordinator} from "src/chainlink/mocks/MockVRFCoordinator.sol";
 import {Equestria1155} from "src/amm/Equestria1155.sol";
 
 contract NFTRentalVaultTest is Test {
     NFTRentalVault vault;
     GovernanceToken govToken;
+    MockVRFCoordinator coordinator;
     Equestria1155 nft;
 
     address owner = address(0x0999);
@@ -25,7 +27,8 @@ contract NFTRentalVaultTest is Test {
         govToken = new GovernanceToken(owner, owner, owner, owner);
 
         // deploy NFT
-        nft = new Equestria1155("ipfs://game/{id}");
+        coordinator = new MockVRFCoordinator();
+        nft = new Equestria1155("ipfs://game/{id}", address(coordinator), bytes32("eq1155key"), 1);
 
         // deploy vault
         NFT_ID = nft.PINKIE_PIE();
@@ -55,10 +58,7 @@ contract NFTRentalVaultTest is Test {
         values[5] = 100;
         nft.mintBatch(alice, ids, values, "");
 
-        // craft NFT so alice has PINKIE_PIE
-        vm.startPrank(alice);
-        nft.craft(NFT_ID);
-        vm.stopPrank();
+        nft.mint(alice, NFT_ID, 1, "");
 
         // approvals
         vm.prank(alice);

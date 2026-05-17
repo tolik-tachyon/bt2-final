@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
 import {Equestria1155} from "src/amm/Equestria1155.sol";
+import {MockVRFCoordinator} from "src/chainlink/mocks/MockVRFCoordinator.sol";
 
 contract GoodReceiver is IERC1155Receiver {
     event SingleReceived(address operator, address from, uint256 id, uint256 value, bytes data);
@@ -60,12 +61,14 @@ contract Equestria1155Test is Test {
     Equestria1155 internal token;
     GoodReceiver internal goodReceiver;
     BadReceiver internal badReceiver;
+    MockVRFCoordinator internal coordinator;
 
     address internal alice = address(0xA11CE);
     address internal bob = address(0xB0B);
 
     function setUp() public {
-        token = new Equestria1155("ipfs://game/{id}");
+        coordinator = new MockVRFCoordinator();
+        token = new Equestria1155("ipfs://game/{id}", address(coordinator), bytes32("eq1155key"), 1);
 
         goodReceiver = new GoodReceiver();
         badReceiver = new BadReceiver();
@@ -139,7 +142,7 @@ contract Equestria1155Test is Test {
     function testCraftSuccessMintsNFTAndBurnsResources() public {
         uint256 id = token.PINKIE_PIE();
         vm.prank(alice);
-        token.craft(id);
+        uint256 reqId = token.craft(id);
 
         assertEq(token.balanceOf(alice, token.HONESTY()), 85);
         assertEq(token.balanceOf(alice, token.KINDNESS()), 90);
@@ -147,7 +150,26 @@ contract Equestria1155Test is Test {
         assertEq(token.balanceOf(alice, token.GENEROSITY()), 80);
         assertEq(token.balanceOf(alice, token.LOYALTY()), 95);
         assertEq(token.balanceOf(alice, token.MAGIC()), 100);
-        assertEq(token.balanceOf(alice, token.PINKIE_PIE()), 1);
+        assertEq(token.balanceOf(alice, id), 0);
+
+        // simulate Chainlink fulfillment with a non-lucky number (>=10)
+        uint256[] memory words = new uint256[](1);
+        words[0] = 50; // 50 % 100 = 50, not < 10, so amount = 1
+        coordinator.fulfillRandomWords(reqId, words);
+
+        assertEq(token.balanceOf(alice, id), 1);
+    }
+
+    function testCraftDoubleDropOnLuckyRoll() public {
+        uint256 id = token.PINKIE_PIE();
+        vm.prank(alice);
+        uint256 reqId = token.craft(id);
+
+        uint256[] memory words = new uint256[](1);
+        words[0] = 9; // 9 % 100 = 9 < 10 -> double drop
+        coordinator.fulfillRandomWords(reqId, words);
+
+        assertEq(token.balanceOf(alice, id), 2);
     }
 
     function testCraftRevertsOnInsufficientResources() public {

@@ -4,8 +4,10 @@ pragma solidity ^0.8.25;
 import {IERC165, IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
-contract Equestria1155 is IERC1155, ReentrancyGuard {
+contract Equestria1155 is IERC1155, ReentrancyGuard, VRFConsumerBaseV2Plus {
     uint256 public constant HONESTY = 1;
     uint256 public constant KINDNESS = 2;
     uint256 public constant LAUGHTER = 3;
@@ -34,8 +36,18 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
     string internal _baseUri;
     address public immutable contractOwner;
 
+    bytes32 public immutable keyHash;
+    uint256 public immutable subscriptionId;
+    uint16 public constant REQUEST_CONFIRMATIONS = 3;
+    uint32 public constant CALLBACK_GAS_LIMIT = 200_000;
+
+    mapping(uint256 => address) public pendingCraftUser;
+    mapping(uint256 => uint256) public pendingCraftPonyId;
+
+    event CraftRequested(uint256 indexed requestId, address indexed user, uint256 indexed ponyId);
+    event CraftFulfilled(uint256 indexed requestId, address indexed user, uint256 indexed ponyId);
+
     error NotOwner();
-    error ZeroAddress();
     error NotApproved();
     error InsufficientBalance();
     error SmartContractNotAccepted();
@@ -51,7 +63,9 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
     error NotEnoughLoyalty();
     error NotEnoughMagic();
 
-    constructor(string memory baseURI) {
+    constructor(string memory baseURI, address vrfCoordinator, bytes32 keyHash_, uint256 subscriptionId_)
+        VRFConsumerBaseV2Plus(vrfCoordinator)
+    {
         recipes[PINKIE_PIE] = Recipe({honesty: 15, kindness: 10, laughter: 100, generosity: 20, loyalty: 5, magic: 0});
 
         recipes[STARLIGHT_GLIMMER] =
@@ -67,6 +81,8 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
         }
         _baseUri = baseURI;
         contractOwner = msg.sender;
+        keyHash = keyHash_;
+        subscriptionId = subscriptionId_;
     }
 
     function uri(uint256 tokenId) public view returns (string memory) {
@@ -110,7 +126,7 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
         return bytes1(uint8(b + 87));
     }
 
-    function craft(uint256 ponyId) external nonReentrant {
+    function craft(uint256 ponyId) external nonReentrant returns (uint256 requestId) {
         Recipe memory r = recipes[ponyId];
         if (r.honesty + r.kindness + r.laughter + r.generosity + r.loyalty + r.magic == 0) revert InvalidRecipe();
 
@@ -130,7 +146,40 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
         _burn(user, LOYALTY, r.loyalty);
         _burn(user, MAGIC, r.magic);
 
-        _mint(user, ponyId, 1, "");
+        // SLITHER-NOTE:
+        //     it's false positive by Slither, because it's incorrect behavior
+        //     to emit event before requestRandomWords. Slither complains only
+        //     because it's external call
+        // slither-disable-next-line reentrancy-benign
+        requestId = s_vrfCoordinator.requestRandomWords(
+            VRFV2PlusClient.RandomWordsRequest({
+                keyHash: keyHash,
+                subId: subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS,
+                callbackGasLimit: CALLBACK_GAS_LIMIT,
+                numWords: 1,
+                extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
+            })
+        );
+
+        pendingCraftUser[requestId] = user;
+        pendingCraftPonyId[requestId] = ponyId;
+
+        emit CraftRequested(requestId, user, ponyId);
+    }
+
+    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {
+        address user = pendingCraftUser[requestId];
+        uint256 ponyId = pendingCraftPonyId[requestId];
+
+        delete pendingCraftUser[requestId];
+        delete pendingCraftPonyId[requestId];
+
+        // 10% chance of double drop
+        uint256 amount = (randomWords[0] % 100 < 10) ? 2 : 1;
+        _mint(user, ponyId, amount, "");
+
+        emit CraftFulfilled(requestId, user, ponyId);
     }
 
     // NOTE: inherited from IERC1155
@@ -138,15 +187,6 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
     // event TransferBatch(address indexed _operator, address indexed _from, address indexed _to, uint256[] _ids, uint256[] _values);
     // event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
     // event URI(string _value, uint256 indexed _id);
-
-    modifier onlyOwner() {
-        _onlyOwner();
-        _;
-    }
-
-    function _onlyOwner() internal view {
-        if (msg.sender != contractOwner) revert NotOwner();
-    }
 
     modifier nonZeroAddress(address addr) {
         _nonZeroAddress(addr);
@@ -289,6 +329,11 @@ contract Equestria1155 is IERC1155, ReentrancyGuard {
         bytes memory data
     ) internal {
         if (to.code.length > 0) {
+            // SLITHER-NOTE:
+            //     it's false positive by Slither, because it's incorrect behavior
+            //     to emit event before _safeHandleSmartContract. Slither complains only
+            //     because it's external call. It is action at the end of transfer operation
+            // slither-disable-next-line reentrancy-events
             bytes4 response = IERC1155Receiver(to).onERC1155Received(operator, from, id, value, data);
 
             if (response != IERC1155Receiver.onERC1155Received.selector) {
