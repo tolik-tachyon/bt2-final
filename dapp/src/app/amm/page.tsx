@@ -27,9 +27,9 @@ export default function AMMPage() {
       { address: ADDRESSES.amm, abi: AMM_ABI, functionName: "reserveB" },
       { address: ADDRESSES.amm, abi: AMM_ABI, functionName: "tokenA"   },
       { address: ADDRESSES.amm, abi: AMM_ABI, functionName: "tokenB"   },
-      { address: ADDRESSES.gameToken, abi: ERC20_ABI, functionName: "balanceOf", args: [address] },
-      { address: ADDRESSES.gameToken, abi: ERC20_ABI, functionName: "symbol"    },
-      { address: ADDRESSES.gameToken, abi: ERC20_ABI, functionName: "allowance", args: [address, ADDRESSES.amm] },
+      { address: ADDRESSES.tokenA, abi: ERC20_ABI, functionName: "balanceOf", args: [address] },
+      { address: ADDRESSES.tokenA, abi: ERC20_ABI, functionName: "symbol"    },
+      { address: ADDRESSES.tokenA, abi: ERC20_ABI, functionName: "allowance", args: [address, ADDRESSES.amm] },
     ] : [],
   });
 
@@ -52,7 +52,7 @@ export default function AMMPage() {
       if (needsApproval) {
         setStep("approving");
         const approveTx = await writeContractAsync({
-          address:      direction === "AtoB" ? ADDRESSES.gameToken : ADDRESSES.gameToken,
+          address:      direction === "AtoB" ? ADDRESSES.tokenA : ADDRESSES.tokenB,
           abi:          ERC20_ABI,
           functionName: "approve",
           args:         [ADDRESSES.amm, maxUint256],
@@ -60,7 +60,7 @@ export default function AMMPage() {
         setTxHash(approveTx);
       }
       setStep("swapping");
-      const tokenIn = direction === "AtoB" ? ADDRESSES.gameToken : ADDRESSES.gameToken;
+      const tokenIn = direction === "AtoB" ? ADDRESSES.tokenA : ADDRESSES.tokenB;
       const minOut  = (estimatedOut * 95n) / 100n; // 5% slippage
       const swapTx  = await writeContractAsync({
         address:      ADDRESSES.amm,
