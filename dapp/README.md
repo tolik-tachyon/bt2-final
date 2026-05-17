@@ -2,12 +2,21 @@
 
 Next.js 14 + TypeScript + Wagmi v2 + RainbowKit dApp for the GameFi Economy protocol on Arbitrum Sepolia.
 
+## Prerequisites
+
+### On top level - run
+
+```sh
+$ forge build
+$ cp out/ src/lib/out/
+```
+
 ## Setup
 
 ```sh
-npm install
-cp .env.local.example .env.local
-npm run dev
+$ npm install
+$ cp .env.local.example .env.local
+$ npm run dev
 ```
 
 Fill every `NEXT_PUBLIC_*_ADDR` value from the Foundry deployment output and set `NEXT_PUBLIC_SUBGRAPH_URL` to the deployed subgraph endpoint.
