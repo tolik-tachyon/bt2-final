@@ -4,11 +4,13 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+
 env:
   FOUNDRY_PROFILE: ci
+
 jobs:
-  check:
-    name: Foundry project
+  forge-fmt:
+    name: Forge fmt
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -17,41 +19,64 @@ jobs:
         with:
           persist-credentials: false
           submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge fmt --check
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+  forge-build-test-coverage:
+    name: Forge build / test / coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge build --sizes
+      - run: forge test -vvv
+      - run: forge coverage --report lcov
 
-      - name: Show Forge version
-        run: forge --version
-
-      - name: Run Forge fmt
-        run: forge fmt --check
-
-      - name: Run Forge build
-        run: forge build --sizes
-
-      - name: Run Forge tests
-        run: forge test -vvv
-
-      - name: Run Forge coverage
-        run: forge coverage --report lcov
-
-      - name: Install Node
-        uses: actions/setup-node@v4
+  solhint:
+    name: Solhint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - run: npm install -g solhint
+      - run: solhint 'src/**/*.sol'
 
-      - name: Install solhint + prettier
-        run: npm install -g solhint prettier prettier-plugin-solidity
+  prettier:
+    name: Prettier (frontend)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install -g prettier prettier-plugin-solidity
+      - run: prettier --check 'frontend/**/*.{js,html,css}'
 
-      - name: Run solhint
-        run: solhint 'src/**/*.sol'
-
-      - name: Run Prettier check (frontend)
-        run: prettier --check 'frontend/**/*.{js,html,css}'
-
-      - name: Install Slither
-        run: pip install slither-analyzer
-
-      - name: Run Slither
-        run: slither . --fail-high --fail-medium
+  slither:
+    name: Slither
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: pip install slither-analyzer
+      - run: slither . --fail-medium
