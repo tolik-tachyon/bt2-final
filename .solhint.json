@@ -1,0 +1,17 @@
+{
+  "extends": "solhint:recommended",
+  "rules": {
+    "function-max-lines": ["warn", 80],
+
+    "use-natspec": "off",
+
+    "func-visibility": "off",
+
+    "import-path-check": "off",
+    "immutable-vars-naming": "off",
+    "const-name-snakecase": "off",
+
+    "no-empty-blocks": "off",
+    "no-inline-assembly": "off"
+  }
+}
