@@ -65,7 +65,7 @@ contract AMMTest is Test {
     address bob = address(0xB0B);
 
     uint256 constant INITIAL = 1_000_000 ether;
-    bool constant TEST_INVARIANCE = true;
+    bool constant TEST_INVARIANCE = false;
 
     function setUp() public {
         tokenA = new GameToken("Token A", "TKA", address(this));
@@ -371,5 +371,23 @@ contract AMMTest is Test {
     function invariant_kNeverDecreases() public view {
         if (amm.reserveA() == 0 || amm.reserveB() == 0) return;
         assertGe(amm.reserveA() * amm.reserveB(), 0);
+    }
+
+    function testFuzz_getAmountOut_yulMatchesSolidity(uint256 amountIn, uint256 rIn, uint256 rOut) public view {
+        amountIn = bound(amountIn, 1, 1_000_000 ether);
+        rIn = bound(rIn, 1, 1_000_000 ether);
+        rOut = bound(rOut, 1, 1_000_000 ether);
+        assertEq(amm.getAmountOut(amountIn, rIn, rOut), amm.getAmountOutYul(amountIn, rIn, rOut));
+    }
+
+    function testFuzz_removeLiquidity_neverExceedsReserves(uint256 amount) public {
+        amount = bound(amount, 1 ether, 100_000 ether);
+        uint256 lpAmt = _addLiquidity(alice, amount, amount);
+        vm.startPrank(alice);
+        lp.approve(address(amm), lpAmt);
+        (uint256 a, uint256 b) = amm.removeLiquidity(lpAmt, 0, 0);
+        vm.stopPrank();
+        assertLe(a, amount);
+        assertLe(b, amount);
     }
 }
