@@ -1156,8 +1156,7 @@ export const EQUESTRIA_1155_ABI =
 
                    ]
     }
-]
- as const;
+] as const;
 
 export const GOVERNANCE_TOKEN_ABI = 
 [
@@ -2172,8 +2171,7 @@ export const GOVERNANCE_TOKEN_ABI =
 
                    ]
     }
-]
- as const;
+] as const;
 
 export const GOVERNOR_ABI = 
 [
@@ -3861,8 +3859,7 @@ export const GOVERNOR_ABI =
                        }
                    ]
     }
-]
- as const;
+] as const;
 
 export const AMM_ABI = 
 [
@@ -4432,8 +4429,7 @@ export const AMM_ABI =
 
                    ]
     }
-]
- as const;
+] as const;
 
 export const NFT_RENTAL_VAULT_ABI = 
 [
@@ -5745,8 +5741,7 @@ export const NFT_RENTAL_VAULT_ABI =
 
                    ]
     }
-]
- as const;
+] as const;
 
 export const VRF_CONSUMER_ABI = 
 [
@@ -6123,8 +6118,7 @@ export const VRF_CONSUMER_ABI =
 
                    ]
     }
-]
- as const;
+] as const;
 
 export const GAME_TOKEN_FACTORY_ABI = 
 [
@@ -6269,8 +6263,7 @@ export const GAME_TOKEN_FACTORY_ABI =
                    ],
         "anonymous":  false
     }
-]
- as const;
+] as const;
 
 export const GAME_TOKEN_ABI = 
 [
@@ -6713,8 +6706,7 @@ export const GAME_TOKEN_ABI =
                        }
                    ]
     }
-]
- as const;
+] as const;
 
 export const TOKEN_VESTING_ABI = 
 [
@@ -6901,8 +6893,7 @@ export const TOKEN_VESTING_ABI =
 
                    ]
     }
-]
- as const;
+] as const;
 
 export const BOX_ABI = 
 [
@@ -6989,8 +6980,7 @@ export const BOX_ABI =
 
                    ]
     }
-]
- as const;
+] as const;
 
 export const PRICE_FEED_CONSUMER_ABI = 
 [
@@ -7081,7 +7071,6 @@ export const PRICE_FEED_CONSUMER_ABI =
 
                    ]
     }
-]
- as const;
+] as const;
 
 export const ERC20_ABI = GAME_TOKEN_ABI;
