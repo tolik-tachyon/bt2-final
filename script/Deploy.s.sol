@@ -37,6 +37,14 @@ contract Deploy is Script {
     // Got from: https://docs.chain.link/data-feeds/price-feeds/addresses?network=arbitrum&page=1#arbitrum-sepolia
     address constant PRICE_FEED = 0xd30e2101a97dcbAeBCBC04F14C3f624E67A35165;
 
+    // // -- Chainlink config (Base Sepolia) -------------------
+    // // Got from: https://docs.chain.link/vrf/v2-5/supported-networks
+    // address constant VRF_COORDINATOR = 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE;
+    // bytes32 constant VRF_KEY_HASH = 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71;
+    // // -- ETH/USD Base Sepolia ------------------------------
+    // // Got from: https://docs.chain.link/data-feeds/price-feeds/addresses
+    // address constant PRICE_FEED = 0x4aDC67696bA383F43DD60A9e78F2C97Fbbfc7cb1;
+
     // NOTE: shortened for testnet - use 2 days + 1 hours for production
     uint256 constant TIMELOCK_DELAY = 10 seconds;
     uint256 constant STALENESS = 10 minutes;
