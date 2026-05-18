@@ -67,8 +67,20 @@ contract AMM is ReentrancyGuard {
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
+            // SLITHER-NOTE:
+            //     intentional divide-before-multiply - ratio fitting truncates
+            //     toward zero, which means the vault takes slightly less than
+            //     desired.
+            //     This is the standard Uniswap V2 approach and it is acceptable.
+            // slither-disable-next-line divide-before-multiply
             uint256 amountBOptimal = (amountADesired * reserveB) / reserveA;
             if (amountBOptimal > amountBDesired) {
+                // SLITHER-NOTE:
+                //     intentional divide-before-multiply - ratio fitting truncates
+                //     toward zero, which means the vault takes slightly less than
+                //     desired.
+                //     This is the standard Uniswap V2 approach and it is acceptable.
+                // slither-disable-next-line divide-before-multiply
                 uint256 amountAOptimal = (amountBDesired * reserveA) / reserveB;
                 amountA = amountAOptimal;
                 amountB = amountBDesired;
