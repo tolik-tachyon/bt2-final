@@ -137,10 +137,6 @@ contract Equestria1155 is IERC1155, ReentrancyGuard, VRFConsumerBaseV2Plus {
         _;
     }
 
-    // SLITHER-NOTE:
-    //     staright up not true. nonZeroAddress verifies that
-    //     gameGovernor_ is not empty
-    // slither-disable-next-line missing-zero-check
     function setGovernor(address gameGovernor_) external onlyOwner nonZeroAddress(gameGovernor_) {
         gameGovernor = gameGovernor_;
         emit NewGovernor(gameGovernor);
@@ -176,11 +172,6 @@ contract Equestria1155 is IERC1155, ReentrancyGuard, VRFConsumerBaseV2Plus {
         _burn(user, LOYALTY, r.loyalty);
         _burn(user, MAGIC, r.magic);
 
-        // SLITHER-NOTE:
-        //     it's false positive by Slither, because it's incorrect behavior
-        //     to emit event before requestRandomWords. Slither complains only
-        //     because it's external call
-        // slither-disable-next-line reentrancy-benign
         requestId = s_vrfCoordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
                 keyHash: keyHash,
@@ -359,11 +350,6 @@ contract Equestria1155 is IERC1155, ReentrancyGuard, VRFConsumerBaseV2Plus {
         bytes memory data
     ) internal {
         if (to.code.length > 0) {
-            // SLITHER-NOTE:
-            //     it's false positive by Slither, because it's incorrect behavior
-            //     to emit event before _safeHandleSmartContract. Slither complains only
-            //     because it's external call. It is action at the end of transfer operation
-            // slither-disable-next-line reentrancy-events
             bytes4 response = IERC1155Receiver(to).onERC1155Received(operator, from, id, value, data);
 
             if (response != IERC1155Receiver.onERC1155Received.selector) {

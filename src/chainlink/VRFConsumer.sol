@@ -24,12 +24,6 @@ contract VRFConsumer is VRFConsumerBaseV2Plus {
 
     function requestRandom() external returns (uint256 requestId) {
         requestToSender[requestId] = msg.sender;
-        // SLITHER-NOTE:
-        //     it's false positive by Slither, because it's incorrect behavior
-        //     to emit event before requestRandomWords. Slither complains only
-        //     because it's external call. Also it kind of modifies data, "after"
-        //     external call, that considered as possible reentrancy
-        // slither-disable-next-line reentrancy-events,reentrancy-benign
         requestId = s_vrfCoordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
                 keyHash: keyHash,

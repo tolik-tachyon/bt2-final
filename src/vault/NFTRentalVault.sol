@@ -72,9 +72,6 @@ contract NFTRentalVault is ERC4626, Ownable, ReentrancyGuard, IERC1155Receiver {
 
     /// @notice Unstake NFT and return it to renter
     function unstakeNFT(uint256 nftId) external nonReentrant {
-        // SLITHER-NOTE:
-        //     it just compares addresses, false-positive
-        // slither-disable-next-line timestamp
         if (rentals[nftId].renter != msg.sender) revert NotRenter();
 
         delete rentals[nftId];
@@ -88,11 +85,6 @@ contract NFTRentalVault is ERC4626, Ownable, ReentrancyGuard, IERC1155Receiver {
 
     /// @notice Owner (Timelock) injects yield by depositing extra assets
     function injectYield(uint256 amount) external onlyOwner {
-        // SLITHER-NOTE:
-        //     it's false positive by Slither, because it's incorrect behavior
-        //     to emit event before safeTransferFrom. Slither complains only
-        //     because it's external call
-        // slither-disable-next-line reentrancy-events
         SafeERC20.safeTransferFrom(IERC20(asset()), msg.sender, address(this), amount);
         emit YieldInjected(amount);
     }

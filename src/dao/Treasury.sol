@@ -33,10 +33,6 @@ contract Treasury {
 
     function withdrawETH(address payable to, uint256 amount) external onlyTimelock {
         if (to == address(0)) revert ZeroAddress();
-        // SLITHER-NOTE:
-        //     it's custom implementation of withdrawETH,
-        //     so it expected to perform low-level call
-        // slither-disable-next-line low-level-calls
         (bool success,) = to.call{value: amount}("");
         if (!success) revert TransferFailed();
     }

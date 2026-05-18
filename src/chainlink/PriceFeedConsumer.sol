@@ -21,11 +21,6 @@ contract PriceFeedConsumer {
             priceFeed.latestRoundData();
         if (startedAt == 0) revert InvalidRound();
         if (answeredInRound < roundId) revert InvalidRound();
-        // SLITHER-NOTE:
-        //     basically, it compares timestamps, and that's how
-        //     getLatestPrice should work, it can't be done in
-        //     other way, it needs to compare them.
-        // slither-disable-next-line timestamp
         if (block.timestamp - updatedAt_ > stalenessThreshold) revert StalePrice();
         if (price_ < 1) revert InvalidPrice();
         price = price_;

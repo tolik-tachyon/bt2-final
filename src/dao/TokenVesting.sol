@@ -28,15 +28,7 @@ contract TokenVesting {
     function vestedAmount() public view returns (uint256) {
         uint256 total = token.balanceOf(address(this)) + released;
 
-        // SLITHER-NOTE:
-        //     it clamps block's timestamp between expected range,
-        //     it can't avoid compare timestamps
-        // slither-disable-next-line timestamp
         if (block.timestamp < start) return 0;
-        // SOLHINT-NOTE:
-        //     solhint wants here '>', but it's not applicable. changing constant
-        //     or adding +/- 1 to convert it to strict one feels clunky
-        // solhint-disable-next-line gas-strict-inequalities
         if (block.timestamp >= start + DURATION) return total;
 
         return (total * (block.timestamp - start)) / DURATION;
